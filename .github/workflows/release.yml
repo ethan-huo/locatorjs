@@ -39,13 +39,18 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - name: Build workspace dependencies
+        run: |
+          pnpm --filter @locator/shared build
+          pnpm --filter @locator/runtime build
+          pnpm --filter @locator/babel-jsx build
+          pnpm --filter @locator/react-devtools-hook exec -- tsc --outDir dist --declaration --noEmit false
+
       - name: Build extension
-        working-directory: apps/extension
-        run: pnpm build
+        run: pnpm --filter locatorjs-extension build
 
       - name: Pack Chrome extension
-        working-directory: apps/extension
-        run: pnpm pack:chrome
+        run: pnpm --filter locatorjs-extension pack:chrome
 
       - name: Release
         uses: softprops/action-gh-release@v2
