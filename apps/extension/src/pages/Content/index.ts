@@ -1,10 +1,70 @@
 import { getStoredOptions, setStoredOptions } from '@locator/shared';
 import browser from '../../browser';
 
-browser.storage.local.get(['target'], function (result) {
-  if (typeof result?.target === 'string') {
-    document.documentElement.dataset.locatorTarget = result.target;
+type TargetValue = string | undefined;
+
+function sanitizeTarget(value: unknown): TargetValue {
+  if (typeof value === 'string' && value.trim().length > 0) {
+    return value;
   }
+  return undefined;
+}
+
+function notifyOptionsUpdated() {
+  try {
+    postMessage({ type: 'LOCATOR_EXTENSION_UPDATED_OPTIONS' }, '*');
+  } catch (error) {
+    // Ignore cross-origin issues; runtime can fall back to dataset value.
+  }
+}
+
+function persistTargetValue(target: TargetValue) {
+  try {
+    const options = getStoredOptions();
+    const canOverride =
+      options.templateSource === 'extension' ||
+      (!options.templateSource && options.templateOrTemplateId === undefined);
+
+    if (!canOverride) {
+      return;
+    }
+
+    if (target) {
+      if (
+        options.templateOrTemplateId === target &&
+        options.templateSource === 'extension'
+      ) {
+        return;
+      }
+      setStoredOptions({
+        ...options,
+        templateOrTemplateId: target,
+        templateSource: 'extension',
+      });
+      notifyOptionsUpdated();
+    } else if (options.templateSource === 'extension') {
+      const nextOptions = { ...options };
+      delete nextOptions.templateOrTemplateId;
+      delete nextOptions.templateSource;
+      setStoredOptions(nextOptions);
+      notifyOptionsUpdated();
+    }
+  } catch (error) {
+    // localStorage can be blocked (e.g., privacy mode); ignore syncing failures
+  }
+}
+
+function applyTargetValue(target: TargetValue) {
+  if (target) {
+    document.documentElement.dataset.locatorTarget = target;
+  } else {
+    delete document.documentElement.dataset.locatorTarget;
+  }
+  persistTargetValue(target);
+}
+
+browser.storage.local.get(['target'], function (result) {
+  applyTargetValue(sanitizeTarget(result?.target));
 });
 
 browser.storage.local.get(['enableExperimentalFeatures'], function (result) {
@@ -16,7 +76,7 @@ browser.storage.local.get(['enableExperimentalFeatures'], function (result) {
 browser.storage.onChanged.addListener(function (changes) {
   for (const [key, { newValue }] of Object.entries(changes)) {
     if (key === 'target') {
-      document.documentElement.dataset.locatorTarget = newValue;
+      applyTargetValue(sanitizeTarget(newValue));
     }
   }
 });

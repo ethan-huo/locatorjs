@@ -1,6 +1,7 @@
 export type ProjectOptions = {
   projectPath?: string;
   templateOrTemplateId?: string;
+  templateSource?: "extension" | "project";
   adapterId?: string;
   replacePath?: {
     from: string;
@@ -44,6 +45,12 @@ export function getStoredOptions(): ProjectOptions {
     }
     if (typeof parsedOptions.templateOrTemplateId === "string") {
       options.templateOrTemplateId = parsedOptions.templateOrTemplateId;
+    }
+    if (parsedOptions.templateSource === "extension") {
+      options.templateSource = "extension";
+    }
+    if (parsedOptions.templateSource === "project") {
+      options.templateSource = "project";
     }
     if (typeof parsedOptions.adapterId === "string") {
       options.adapterId = parsedOptions.adapterId;

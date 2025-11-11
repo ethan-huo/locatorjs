@@ -19,7 +19,10 @@ export function LinkOptions(props: {
     return options.getOptions().templateOrTemplateId;
   }
   function selectTarget(val: string | undefined) {
-    options.setOptions({ templateOrTemplateId: val });
+    options.setOptions({
+      templateOrTemplateId: val,
+      templateSource: val ? "project" : undefined,
+    });
   }
 
   const currentLink = () =>
